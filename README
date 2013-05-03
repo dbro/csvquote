@@ -3,7 +3,7 @@ csvquote
 
 Dan Brown, May 2013
 
-Are you looking for a way to use the unix shell commands for text processing
+Are you looking for a way to use the UNIX shell commands for text processing
 with comma separated data?
 
 Are you running into problems with embedded commas and newlines that mess
@@ -24,16 +24,18 @@ formatted as CSV that contains commas and newlines inside the data fields.
 Without this program, embedded special characters lead to undesirable interpretation
 of commas and newlines within data fields as field and record separators.
 
-This program temporarily replaces the special characters within data fields
-into harmless nonprinting characters that can be processed by regular text
+This program temporarily replaces the special characters inside quoted data fields
+with harmless nonprinting characters that can be processed as data by regular text
 tools. At the end of processing the text, these nonprinting characters are
 restored to their previous values.
+
+In short, csvquote wraps the standard UNIX text processing apps to make them csv-safe.
 
 By default, the program expects to use these as special characters:
 
 " quote character
 , field delimiter
-\\n record separator
+\n record separator
 
 It is possible to specify a different character for the field and record separators,
 such as tabs or pipe symbols.
