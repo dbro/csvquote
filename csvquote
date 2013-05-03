@@ -1,0 +1,117 @@
+#!/usr/bin/env python
+# Dan Brown
+# http://github.com/dbro/csvquote
+# Note: The code characters \035 and \036 should never appear in the data
+
+USAGE = """csvquote 
+    Intended to be used at the start and end of a text processing pipeline
+    so that regular unix command line tools can properly handle data
+    formatted as CSV that contains commas and newlines inside the data fields.
+    Without this program, embedded special characters prevents usage of
+    programs like head, tail, and cut.
+
+    Usage: 
+    Default special characters are
+    " quote character
+    , field delimiter
+    \\n record separator
+
+    note that the quote character can be contained inside a quoted field
+    by repeating it twice, eg.
+    field1,"field2, has a comma in it","field 3 has a ""Quoted String"" in it"
+
+    typical usage is expected to be as part of a command line pipe, to permit
+    the regular unix text-manipulating commands to avoid misinterpreting
+    special characters found inside fields. eg.
+    cat foobar.csv | csvquote | cut -d ',' -f 7,4,2 | csvquote -u
+
+    csvquote foobar.csv
+    replace the field and line delimiter special characters that appear inside 
+    quoted fields in foobar.csv with nonprinting characters
+    
+    csvquote -u foobar.csv
+    restore the field and line delimiter special characters that appear inside 
+    quoted fields in foobar.csv with regular printing characters
+
+    csvquote -q "'" -d "|" -r "\r\n" foobar.csv
+    replace the pipe and CRLF special characters that appear inside 
+    single-quoted fields in foobar.csv with nonprinting characters.
+ 
+    csvquote -u -t foobar.tsv
+    restore the field and line delimiter special characters that appear inside 
+    foobar.tsv with regular printing characters, with tab as the field delimiter
+"""
+
+# Should use something better than getopt, but this works...
+import sys, csv, getopt
+opts, args = getopt.getopt(sys.argv[1:], "d:q:r:ut?", [])
+if args:
+    i = open(args[0],"U")
+else:
+    i = sys.stdin
+ 
+delimiter = ','
+recordsep = '\n'
+quotechar = '"'
+delimiter_code = '\035'
+recordsep_code = '\034'
+show_usage = False
+replace_mode = True
+ 
+if opts:
+    opts = dict(opts)
+    show_usage = ('-?' in opts) or ('--help' in opts)
+    if '-t' in opts:
+        delimiter = "\t"
+    elif '-d' in opts:
+        delimiter = opts['-d']
+    if '-q' in opts:
+        quotechar = opts['-q']
+    if '-r' in opts:
+        recordsep = opts['-r']
+    if '-u' in opts:
+        replace_mode = False
+ 
+if show_usage:
+    print USAGE
+    sys.exit()
+
+if replace_mode:
+    buf = ""
+    quote_in_effect = False
+    for row in i:
+        # the program is unquoting
+        c_ctr = 0
+        rowlen = len(row)
+        while c_ctr < rowlen:
+            c = row[c_ctr]
+            if quote_in_effect:
+                if (c == quotechar) and (c_ctr < rowlen) and (row[c_ctr+1] == quotechar):
+                    # this is an escaped quote char (note lookahead 1 character)
+                    buf += (c + c)
+                    c_ctr += 1 # skip forward one character
+                elif (c == quotechar):
+                    buf += c
+                    quote_in_effect = False
+                elif (c == delimiter):
+                    buf += delimiter_code
+                elif (c == recordsep):
+                    buf += recordsep_code
+                else:
+                    buf += c
+
+            else:
+                # quote not in effect
+                buf += c
+                if c == quotechar:
+                    quote_in_effect = True
+                elif c == recordsep:
+                    sys.stdout.write(buf)
+                    buf = ""
+            c_ctr += 1
+
+else:
+    # the program is restoring the special characters
+    # we assume that the code characters never appear in the original text
+    for row in i:
+        sys.stdout.write(row.replace(delimiter_code, delimiter).replace(recordsep_code, recordsep))
