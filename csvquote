@@ -46,6 +46,23 @@ USAGE = """csvquote
     foobar.tsv with regular printing characters, with tab as the field delimiter
 """
 
+class Error(Exception):
+    """Base class for exceptions in this module."""
+    pass
+
+class InputError(Error):
+    """Exception raised for errors in the input.
+
+    Attributes:
+        expr -- input expression in which the error occurred
+        msg  -- explanation of the error
+    """
+
+    def __init__(self, expr, msg):
+        self.expr = expr
+        self.msg = msg
+
+
 # Should use something better than getopt, but this works...
 import sys, csv, getopt
 opts, args = getopt.getopt(sys.argv[1:], "d:q:r:ut?", [])
@@ -69,10 +86,16 @@ if opts:
         delimiter = "\t"
     elif '-d' in opts:
         delimiter = opts['-d']
+        if len(delimiter) != 1:
+            raise InputError(delimiter, "field delimiter must be exactly one character")
     if '-q' in opts:
         quotechar = opts['-q']
+        if len(quotechar) != 1:
+            raise InputError(quotechar, "quote character must be exactly one character")
     if '-r' in opts:
         recordsep = opts['-r']
+        if len(recordsep) != 1:
+            raise InputError(recordsep, "record separator must be exactly one character")
     if '-u' in opts:
         replace_mode = False
  
