@@ -1,7 +1,7 @@
 csvquote
 ========
 
-Dan Brown, May 2013
+Dan Brown, May 2013  
 https://github.com/dbro/csvquote
 
 Are you looking for a way to use the UNIX shell commands for text processing
@@ -34,9 +34,9 @@ In short, csvquote wraps your pipeline of UNIX commands to let them work on clea
 
 By default, the program expects to use these as special characters:
 
-" quote character
-, field delimiter
-\n record separator
+" quote character  
+, field delimiter  
+\n record separator  
 
 It is possible to specify different characters for the field and record separators,
 such as tabs or pipe symbols.
@@ -46,7 +46,7 @@ but this should not prevent it from working with Windows-style line endings.
 
 Note that the quote character can be contained inside a quoted field
 by repeating it twice, eg.
-field1,"field2, has a comma in it","field 3 has a ""Quoted String"" in it"
+    field1,"field2, has a comma in it","field 3 has a ""Quoted String"" in it"
 
 Typical usage of csvquote is as part of a command line pipe, to permit
 the regular unix text-manipulating commands to avoid misinterpreting
