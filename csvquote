@@ -2,6 +2,8 @@
 # Dan Brown
 # http://github.com/dbro/csvquote
 # Note: The code characters \035 and \036 should never appear in the data
+# test with this command:
+# ./csvquote testdata.csv | ./csvquote -u | cmp - testdata.csv
 
 USAGE = """csvquote 
     Intended to be used at the start and end of a text processing pipeline
@@ -9,6 +11,8 @@ USAGE = """csvquote
     formatted as CSV that contains commas and newlines inside the data fields.
     Without this program, embedded special characters prevents usage of
     programs like head, tail, and cut.
+
+    accepts input from stdin or a filename; output sent to stdout
 
     Usage: 
     Default special characters are
