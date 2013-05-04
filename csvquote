@@ -84,15 +84,16 @@ if replace_mode:
     buf = ""
     quote_in_effect = False
     for row in i:
-        # the program is unquoting
+        # the program is replacing quoted special chars with nonprinting chars
         c_ctr = 0
         rowlen = len(row)
         while c_ctr < rowlen:
             c = row[c_ctr]
             if quote_in_effect:
-                if (c == quotechar) and (c_ctr < rowlen) and (row[c_ctr+1] == quotechar):
-                    # this is an escaped quote char (note lookahead 1 character)
-                    buf += (c + c)
+                d = row[c_ctr+1] if (c_ctr+1 < rowlen) else None # lookahead 1 char
+                if (c == quotechar) and (d == quotechar):
+                    # this is an escaped quote char
+                    buf += (c + d)
                     c_ctr += 1 # skip forward one character
                 elif (c == quotechar):
                     buf += c
