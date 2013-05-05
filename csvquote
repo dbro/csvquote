@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # Dan Brown
 # http://github.com/dbro/csvquote
 # Note: The code characters \035 and \036 should never appear in the data
@@ -28,6 +28,7 @@ USAGE = """csvquote
     the regular unix text-manipulating commands to avoid misinterpreting
     special characters found inside fields. eg.
     cat foobar.csv | csvquote | cut -d ',' -f 7,4,2 | csvquote -u
+    csvquote foobar.csv | head -n 100 | csvquote -u
 
     csvquote foobar.csv
     replace the field and line delimiter special characters that appear inside 
