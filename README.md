@@ -21,9 +21,8 @@ This program can be used at the start and end of a text processing pipeline
 so that regular unix command line tools can properly handle CSV data that
 contain commas and newlines inside quoted data fields.
 
-Without this program, embedded special characters lead to undesirable
-interpretation of commas and newlines within data fields as field and record
-separators.
+Without this program, embedded special characters would be incorrectly
+interpretated as separators when they are inside quoted data fields.
 
 This program temporarily replaces the special characters inside quoted data
 fields with harmless nonprinting characters that can be processed as data by

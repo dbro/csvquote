@@ -66,10 +66,6 @@ class InputError(Error):
 # Should use something better than getopt, but this works...
 import sys, csv, getopt
 opts, args = getopt.getopt(sys.argv[1:], "d:q:r:ut?", [])
-if args:
-    i = open(args[0],"U")
-else:
-    i = sys.stdin
  
 delimiter = ','
 recordsep = '\n'
@@ -103,43 +99,56 @@ if show_usage:
     print USAGE
     sys.exit()
 
-if replace_mode:
-    buf = ""
-    quote_in_effect = False
-    for row in i:
-        # the program is replacing quoted special chars with nonprinting chars
-        c_ctr = 0
-        rowlen = len(row)
-        while c_ctr < rowlen:
-            c = row[c_ctr]
-            if quote_in_effect:
-                d = row[c_ctr+1] if (c_ctr+1 < rowlen) else None # lookahead 1 char
-                if (c == quotechar) and (d == quotechar):
-                    # this is an escaped quote char
-                    buf += (c + d)
-                    c_ctr += 1 # skip forward one character
-                elif (c == quotechar):
-                    buf += c
-                    quote_in_effect = False
-                elif (c == delimiter):
-                    buf += delimiter_code
-                elif (c == recordsep):
-                    buf += recordsep_code
-                else:
-                    buf += c
+if args:
+    i = open(args[0],"rb")
+else:
+    i = sys.stdin
 
+if replace_mode:
+    # the program is replacing quoted special chars with nonprinting chars
+    quote_in_effect = False
+    maybe_escaped_quote_char = False
+    c = i.read(1)
+    while c != "":
+        if maybe_escaped_quote_char:
+            if (c != quotechar):
+                # this is the end of a quoted field
+                quote_in_effect = False
+            sys.stdout.write(c)
+            maybe_escaped_quote_char = False
+        elif quote_in_effect:
+            if (c == quotechar):
+                # this is either an escaped quote char or the end of a quoted
+                # field. need to read one more character to decide which
+                sys.stdout.write(c)
+                maybe_escaped_quote_char = True
+            elif (c == delimiter):
+                sys.stdout.write(delimiter_code)
+            elif (c == recordsep):
+                sys.stdout.write(recordsep_code)
             else:
-                # quote not in effect
-                buf += c
-                if c == quotechar:
-                    quote_in_effect = True
-                elif c == recordsep:
-                    sys.stdout.write(buf)
-                    buf = ""
-            c_ctr += 1
+                sys.stdout.write(c)
+
+        else:
+            # quote not in effect
+            sys.stdout.write(c)
+            if (c == quotechar):
+                quote_in_effect = True
+        c = i.read(1)
 
 else:
     # the program is restoring the special characters
     # we assume that the code characters never appear in the original text
-    for row in i:
-        sys.stdout.write(row.replace(delimiter_code, delimiter).replace(recordsep_code, recordsep))
+    #for row in i:
+    #    sys.stdout.write(row.replace(delimiter_code, delimiter).replace(recordsep_code, recordsep))
+    c = i.read(1)
+    while c != "":
+        if (c == delimiter_code):
+            sys.stdout.write(delimiter)
+        elif (c == recordsep_code):
+            sys.stdout.write(recordsep)
+        else:
+            sys.stdout.write(c)
+        c = i.read(1)
+
+i.close() # TODO: prefer "with ..." syntax?
