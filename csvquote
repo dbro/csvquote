@@ -105,51 +105,61 @@ if args:
 else:
     i = sys.stdin
 
+BATCH_READ_COUNT = 1024 # TODO: would increasing this improve speed?
+
 if replace_mode:
     # the program is replacing quoted special chars with nonprinting chars
     quote_in_effect = False
     maybe_escaped_quote_char = False
-    c = i.read(1)
-    while c != "":
-        if maybe_escaped_quote_char:
-            if (c != quotechar):
-                # this is the end of a quoted field
-                quote_in_effect = False
-            sys.stdout.write(c)
-            maybe_escaped_quote_char = False
-        elif quote_in_effect:
-            if (c == quotechar):
-                # this is either an escaped quote char or the end of a quoted
-                # field. need to read one more character to decide which
-                sys.stdout.write(c)
-                maybe_escaped_quote_char = True
-            elif (c == delimiter):
-                sys.stdout.write(delimiter_code)
-            elif (c == recordsep):
-                sys.stdout.write(recordsep_code)
-            else:
-                sys.stdout.write(c)
+    cs = i.read(BATCH_READ_COUNT)
+    writebuf = ""
+    while cs != "":
+        for c in cs:
+            if maybe_escaped_quote_char:
+                if (c != quotechar):
+                    # this is the end of a quoted field
+                    quote_in_effect = False
+                writebuf += c
+                maybe_escaped_quote_char = False
+            elif quote_in_effect:
+                if (c == quotechar):
+                    # this is either an escaped quote char or the end of a quoted
+                    # field. need to read one more character to decide which
+                    writebuf += c
+                    maybe_escaped_quote_char = True
+                elif (c == delimiter):
+                    writebuf += delimiter_code
+                elif (c == recordsep):
+                    writebuf += recordsep_code
+                else:
+                    writebuf += c
 
-        else:
-            # quote not in effect
-            sys.stdout.write(c)
-            if (c == quotechar):
-                quote_in_effect = True
-        c = i.read(1)
+            else:
+                # quote not in effect
+                writebuf += c
+                if (c == quotechar):
+                    quote_in_effect = True
+        sys.stdout.write(writebuf)
+        writebuf = ""
+        cs = i.read(BATCH_READ_COUNT)
 
 else:
     # the program is restoring the special characters
     # we assume that the code characters never appear in the original text
     #for row in i:
     #    sys.stdout.write(row.replace(delimiter_code, delimiter).replace(recordsep_code, recordsep))
-    c = i.read(1)
-    while c != "":
-        if (c == delimiter_code):
-            sys.stdout.write(delimiter)
-        elif (c == recordsep_code):
-            sys.stdout.write(recordsep)
-        else:
-            sys.stdout.write(c)
-        c = i.read(1)
+    cs = i.read(BATCH_READ_COUNT)
+    writebuf = ""
+    while cs != "":
+        for c in cs:
+            if (c == delimiter_code):
+                writebuf += delimiter
+            elif (c == recordsep_code):
+                writebuf += recordsep
+            else:
+                writebuf += c
+        sys.stdout.write(writebuf)
+        writebuf = ""
+        cs = i.read(BATCH_READ_COUNT)
 
 i.close() # TODO: prefer "with ..." syntax?
