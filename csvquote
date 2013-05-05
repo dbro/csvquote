@@ -107,42 +107,45 @@ else:
 
 BATCH_READ_COUNT = 1024 # TODO: would increasing this improve speed?
 
+def replace_special_chars(existing_state, c):
+    quote_in_effect = existing_state[0]
+    maybe_escaped_quote_char = existing_state[1]
+    writebuf = existing_state[2]
+    if maybe_escaped_quote_char:
+        if (c != quotechar):
+            # this is the end of a quoted field
+            quote_in_effect = False
+        writebuf += c
+        maybe_escaped_quote_char = False
+    elif quote_in_effect:
+        if (c == quotechar):
+            # this is either an escaped quote char or the end of a quoted
+            # field. need to read one more character to decide which
+            writebuf += c
+            maybe_escaped_quote_char = True
+        elif (c == delimiter):
+            writebuf += delimiter_code
+        elif (c == recordsep):
+            writebuf += recordsep_code
+        else:
+            writebuf += c
+    else:
+        # quote not in effect
+        writebuf += c
+        if (c == quotechar):
+            quote_in_effect = True
+    return (quote_in_effect, maybe_escaped_quote_char, writebuf)
+
 if replace_mode:
     # the program is replacing quoted special chars with nonprinting chars
     quote_in_effect = False
     maybe_escaped_quote_char = False
     cs = i.read(BATCH_READ_COUNT)
-    writebuf = ""
     while cs != "":
-        for c in cs:
-            if maybe_escaped_quote_char:
-                if (c != quotechar):
-                    # this is the end of a quoted field
-                    quote_in_effect = False
-                writebuf += c
-                maybe_escaped_quote_char = False
-            elif quote_in_effect:
-                if (c == quotechar):
-                    # this is either an escaped quote char or the end of a quoted
-                    # field. need to read one more character to decide which
-                    writebuf += c
-                    maybe_escaped_quote_char = True
-                elif (c == delimiter):
-                    writebuf += delimiter_code
-                elif (c == recordsep):
-                    writebuf += recordsep_code
-                else:
-                    writebuf += c
-
-            else:
-                # quote not in effect
-                writebuf += c
-                if (c == quotechar):
-                    quote_in_effect = True
+        quote_in_effect, maybe_escaped_quote_char, writebuf = \
+            reduce(replace_special_chars, cs, (quote_in_effect, maybe_escaped_quote_char, ""))
         sys.stdout.write(writebuf)
-        writebuf = ""
         cs = i.read(BATCH_READ_COUNT)
-
 else:
     # the program is restoring the special characters
     # we assume that the code characters never appear in the original text
