@@ -29,10 +29,6 @@ fields with harmless nonprinting characters that can be processed as data by
 regular text tools. At the end of processing the text, these nonprinting
 characters are restored to their previous values.
 
-*caveat:* if you need to search for special characters (commas and newlines)
-within fields, csvquote will NOT work for you. Instead, you could try using 
-special csv-aware software such as csvfix.
-
 In short, csvquote wraps the pipeline of UNIX commands to let them work on
 clean data that is consistently separated, with no ambiguous special
 characters present inside the data fields.
@@ -82,3 +78,13 @@ Known limitations
 The program does not correctly handle multi-character delimiters, but this
 is rare in CSV files. It is able to work with Windows-style line endings that
 use /r/n as the record separator.
+
+If you need to search for special characters (commas and newlines)
+*within a quoted field*, then csvquote will *PROBABLY NOT* work for you. These
+delimiter characters get temporarily replaced with nonprinting characters so
+they would not be found. There are two options you could try:
+
+1. Use csvquote as normal, and search for the substitute nonprinting characters
+   instead of the regular delimiters.
+2. Instead of using csvquote, try a csv-aware text tool such as csvfix.
+
