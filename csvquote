@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# coding=utf-8
 # Dan Brown
 # http://github.com/dbro/csvquote
 # Note: The code characters \035 and \036 should never appear in the data
