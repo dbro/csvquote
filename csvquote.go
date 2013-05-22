@@ -72,24 +72,20 @@ func replaceOriginalChars(c byte, stateQuoteInEffect bool, stateMaybeEscapedQuot
 			// this is the end of a quoted field
 			stateQuoteInEffect = false
 		}
-		//d = c
 		stateMaybeEscapedQuoteChar = false
 	} else if stateQuoteInEffect {
-		if c == quotecharByte {
+		switch c {
+		case quotecharByte:
 			// this is either an escaped quote char or the end of a quoted
 			// field. need to read one more character to decide which
-			//d = c
 			stateMaybeEscapedQuoteChar = true
-		} else if c == delimiterByte {
+		case delimiterByte:
 			d = delimiterNonprintingByte
-		} else if c == recordsepByte {
+		case recordsepByte:
 			d = recordsepNonprintingByte
-			//} else {
-			//    d = c
 		}
 	} else {
 		// quote not in effect
-		// d = c
 		if c == quotecharByte {
 			stateQuoteInEffect = true
 		}
