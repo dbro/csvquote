@@ -40,56 +40,65 @@ func main() {
 		input = os.Stdin
 	}
 
-	fieldindex := 0                     // only used in header mode
-	fields := [][]byte{{}}              // only used in header mode
-	stateQuoteInEffect := false         // only used in replace mode
-	stateMaybeEscapedQuoteChar := false // only used in replace mode
-	data := make([]byte, 1024)
+	data := make([]byte, 4096)
+	stateQuoteInEffect := false
+	stateMaybeEscapedQuoteChar := false
+
+	if *headermode {
+		fieldindex := 0
+		fields := [][]byte{{}}
+		datacharmapped := byte('0')
+		_ = datacharmapped // why is this necessary and faster than using _ later?
 outerloop:
-	for {
-		if count, err := input.Read(data); err != nil {
-			if err != io.EOF {
-				log.Fatal(err)
-			}
-			break
-		} else {
-			for i := 0; i < count; i++ {
-				data[i], stateQuoteInEffect, stateMaybeEscapedQuoteChar =
-					mapFunction(data[i], stateQuoteInEffect, stateMaybeEscapedQuoteChar)
-			}
-			if *headermode {
-				for j := 0; j < count; j++ {
+		for {
+			if count, err := input.Read(data); err != nil {
+				if err != io.EOF {
+					log.Fatal(err)
+				}
+				break
+			} else {
+				for i := 0; i < count; i++ {
+					datacharmapped, stateQuoteInEffect, stateMaybeEscapedQuoteChar =
+						mapFunction(data[i], stateQuoteInEffect, stateMaybeEscapedQuoteChar)
 					if fieldindex >= len(fields) {
 						newfield := make([]byte, 0)
 						fields = append(fields, newfield)
 					}
-					switch data[j] {
-					case recordsepByte:
+					if !(stateQuoteInEffect) && (data[i] == recordsepByte) {
 						// this is the end of the header row
 						break outerloop
-					case delimiterByte:
+					} else if !(stateQuoteInEffect) && (data[i] == delimiterByte) {
 						fieldindex++
-					case delimiterNonprintingByte:
-						fields[fieldindex] = append(fields[fieldindex], delimiterByte)
-					case recordsepNonprintingByte:
-						fields[fieldindex] = append(fields[fieldindex], recordsepByte)
-					default:
-						fields[fieldindex] = append(fields[fieldindex], data[j])
+					} else {
+						fields[fieldindex] = append(fields[fieldindex], data[i])
 					}
 				}
+			}
+		}
+		for i := 0; i < len(fields); i++ {
+			fmt.Printf(" %d\t: %s\n", (i + 1), fields[i])
+		}
+	} else {
+		// replace mode
+		for {
+			if count, err := input.Read(data); err != nil {
+				if err != io.EOF {
+					log.Fatal(err)
+				}
+				break
 			} else {
+				for i := 0; i < count; i++ {
+					data[i], stateQuoteInEffect, stateMaybeEscapedQuoteChar =
+						mapFunction(data[i], stateQuoteInEffect, stateMaybeEscapedQuoteChar)
+				}
 				os.Stdout.Write(data[:count])
 			}
 		}
 	}
+
 	err := input.Close()
 	if err != nil {
 		log.Fatal(err)
-	}
-	if *headermode {
-		for i := 0; i < len(fields); i++ {
-			fmt.Printf(" %d\t: %s\n", (i + 1), fields[i])
-		}
 	}
 }
 
