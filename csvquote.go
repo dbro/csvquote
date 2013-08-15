@@ -10,6 +10,8 @@ import (
 
 const delimiterNonprintingByte, recordsepNonprintingByte byte = 31, 30
 
+type mapper func(byte, bool, bool) (byte, bool, bool)
+
 func main() {
 	headermode := flag.Bool("h", false, "print the index of each element in the first row then quit")
 	restoremode := flag.Bool("u", false, "restore the original separator characters")
@@ -102,7 +104,7 @@ outerloop:
 	}
 }
 
-func substituteNonprintingChars(delimiterByte byte, quotecharByte byte, recordsepByte byte) func(byte, bool, bool) (byte, bool, bool) {
+func substituteNonprintingChars(delimiterByte byte, quotecharByte byte, recordsepByte byte) mapper {
 	return func(c byte, stateQuoteInEffect bool, stateMaybeEscapedQuoteChar bool) (byte, bool, bool) {
 		d := c // default
 		if stateMaybeEscapedQuoteChar {
@@ -132,7 +134,7 @@ func substituteNonprintingChars(delimiterByte byte, quotecharByte byte, recordse
 	}
 }
 
-func restoreOriginalChars(delimiterByte byte, recordsepByte byte) func(byte, bool, bool) (byte, bool, bool) {
+func restoreOriginalChars(delimiterByte byte, recordsepByte byte) mapper {
 	return func(c byte, stateQuoteInEffect bool, stateMaybeEscapedQuoteChar bool) (byte, bool, bool) {
 		// need to have same input/output parameters as replaceOriginalChars()
 		// so the state variables are included but not used
