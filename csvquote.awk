@@ -18,8 +18,8 @@ BEGIN {
     maybe_escaped_quote_char = 0; # false
 }
 
-function replace_special_chars(c) {
-    answer = c; # default to pass-through
+function suggest_replacementchar(c) {
+    answer = ""; # default to pass-through, that's what empty string means
     if (maybe_escaped_quote_char) {
         if (c != quotechar) {
             # this is the end of a quoted field
@@ -59,12 +59,21 @@ function replace_special_chars(c) {
         print $0;
     } else {
         # otherwise we scan the line for quote characters
-        writebuf = "";
-        numchars = length($0);
+        writebuf = $0 RS; # concat. the record separator needs to be included
+        numchars = length(writebuf);
         for (i=1;i<=numchars;i++) {
-            writebuf = writebuf (replace_special_chars(substr($0,i,1)));
+            replacementchar = suggest_replacementchar(substr(writebuf,i,1));
+            if (replacementchar != "") {
+                # we need to modify the current character
+                if (i == 1) {
+                    writebuf = replacementchar substr(writebuf, i + 1); # concat
+                } else if (i == numchars) {
+                    writebuf = substr(writebuf, 1, i - 1) replacementchar; # concat
+                } else {
+                    writebuf = substr(writebuf, 1, i - 1) replacementchar substr(writebuf, i + 1); # concat
+                }
+            }
         }
-        writebuf = writebuf (replace_special_chars(RS));
         printf("%s", writebuf);
     }
 }
