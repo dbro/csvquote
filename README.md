@@ -65,12 +65,19 @@ other examples:
 
     csvquote foobar.csv | awk -F, '{sum+=$3} END {print sum}'
 
-Requirements
-------------
+Implementations
+---------------
 
-python
+In order to learn different programming languages, I rewrote this program
+into a few different languages:
 
-TODO: this program could be ported to C to remove the dependence on python.
+    python
+    go
+    awk (partial implementation, no command line flag parsing)
+
+In terms of speed, the go code is fastest and the python code is slowest. In
+my tests with a large CSV file, the python script takes 60 times longer to run
+than the go program. The awk script takes about 8 times longer to run than go.
 
 Known limitations
 -----------------
