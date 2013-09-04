@@ -68,16 +68,16 @@ other examples:
 Implementations
 ---------------
 
-In order to learn different programming languages, I rewrote this program
-into a few different languages:
+In order to learn different programming languages, I wrote versions of this
+program in
 
-    python
-    go
-    awk (partial implementation, no command line flag parsing)
+* python
+* go
+* awk (partial implementation, no command line flag parsing, no header listing)
 
 In terms of speed, the go code is fastest and the python code is slowest. In
-my tests with a large CSV file, the python script takes 60 times longer to run
-than the go program. The awk script takes about 8 times longer to run than go.
+my tests with a large CSV file, the python script takes 70 times longer to run
+than the go program. The awk script takes about 10 times longer to run than go.
 
 Known limitations
 -----------------
