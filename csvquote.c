@@ -13,18 +13,18 @@ TODO: handle multi-byte characters and unicode and utf-8 etc
 TODO: parse options
 */
 
-typedef int (*stateful_translator) (char *, bool *, bool *);
+typedef int (*translator) (char *);
 
-stateful_translator translatorFactory(
+translator translatorFactory(
 bool restoremode, char *delimiter, char *quotechar, char *recordsep) {
     debug("creating translator with d=%d\tq=%d\tr=%d",
         *delimiter, *quotechar, *recordsep);
     if (restoremode) {
-        int trans(char *c, bool *isQuoteInEffect, bool *isMaybeEscapedQuoteChar) {
+        int trans(char *c) {
             debug("attempting restoration of %c", *c);
             switch (*c) {
                 case NON_PRINTING_FIELD_SEPARATOR:
-                    *c = '_';//*delimiter; TODO: this is causing segfault
+                    *c = *delimiter; //TODO: this is causing segfault
                     break;
                 case NON_PRINTING_RECORD_SEPARATOR:
                     *c = '-';//recordsep;
@@ -37,9 +37,11 @@ bool restoremode, char *delimiter, char *quotechar, char *recordsep) {
         return &trans;
     } else {
         // sanitizing mode
-        int trans(char *c, bool *isQuoteInEffect, bool *isMaybeEscapedQuoteChar) {
-            debug("attempting sanitizing of %c", *c);
+        int trans(char *c) {
+            static bool isQuoteInEffect = false;
+            static bool isMaybeEscapedQuoteChar = false;
 
+            debug("attempting sanitizing of %c", *c);
             //if (new_c != c) {
             //    // buffer is both input and output. avoid unnecessary changes
             //    buffer[i] = new_c;
@@ -51,12 +53,10 @@ bool restoremode, char *delimiter, char *quotechar, char *recordsep) {
     }
 }
 
-int copy_file(FILE *in, FILE *out, stateful_translator trans)
+int copy_file(FILE *in, FILE *out, translator trans)
 {
     char buffer[READ_BUFFER_SIZE];
     size_t nbytes;
-    bool isQuoteInEffect = false;
-    bool isMaybeEscapedQuoteChar = false;
     char *c;
     int i;
 
@@ -65,7 +65,7 @@ int copy_file(FILE *in, FILE *out, stateful_translator trans)
         for (i=0; i<nbytes; i++) {
             c = &buffer[i];
             debug("attempting translation of %c", *c);
-            check((*trans)(c, &isQuoteInEffect, &isMaybeEscapedQuoteChar) == 0,
+            check((*trans)(c) == 0,
                 "translator returned unexpected result.");
         }
         check(fwrite(buffer, sizeof(char), nbytes, out) == nbytes,
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     char del = ',';
     char quo = '"';
     char rec = '\n';
-    stateful_translator trans = translatorFactory(true, &del, &quo, &rec);
+    translator trans = translatorFactory(true, &del, &quo, &rec);
 
     debug("starting to copy data ...");
     check(copy_file(stdin, stdout, trans) == 0, "copy_file failed.");
