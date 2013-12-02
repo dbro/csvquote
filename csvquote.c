@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h>
+
+//#define NDEBUG
 #include "dbg.h"
 
 #define READ_BUFFER_SIZE 4096
@@ -68,15 +70,25 @@ const char del, const char quo, const char rec) {
     size_t nbytes;
     char *c, *stopat;
 
-    translator trans = sanitize; // default
-    if (op_mode == RESTORE_MODE) {
-        trans = restore;
-    } else if (op_mode == HEADER_MODE) {
-        debug("header mode goes here");
-        return 0; // exit
+    debug("copying file with d=%d\tq=%d\tr=%d", del, quo, rec);
+
+    translator trans;
+    switch (op_mode) {
+        case SANITIZE_MODE:
+            trans = sanitize;
+            break;
+        case RESTORE_MODE:
+            trans = restore;
+            break;
+        case HEADER_MODE:
+            trans = sanitize;
+            debug("header mode goes here");
+            return 0; // exit
+            break;
+        default:
+            sentinel("unexpected operating mode");
     }
 
-    debug("copying file with d=%d\tq=%d\tr=%d", del, quo, rec);
     while ((nbytes = fread(buffer, sizeof(char), sizeof(buffer), in)) != 0)
     {
         stopat = buffer + (nbytes);
@@ -89,7 +101,6 @@ const char del, const char quo, const char rec) {
     return 0;
 
 error:
-    //if (in) { fclose(input); } // is this appropriate?
     return 1;
 }
 
@@ -152,7 +163,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (input) { fclose(input); }
     return 0;
 
 usage:
