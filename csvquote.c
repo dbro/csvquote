@@ -1,8 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <unistd.h>
 
-//#define NDEBUG
+#define NDEBUG
 #include "dbg.h"
 
 #define READ_BUFFER_SIZE 4096
@@ -80,11 +81,8 @@ const char del, const char quo, const char rec) {
         case RESTORE_MODE:
             trans = restore;
             break;
-        case HEADER_MODE:
-            trans = sanitize;
-            debug("header mode goes here");
-            return 0; // exit
-            break;
+        //case HEADER_MODE:
+        //    sentinel("unexpected operating mode");
         default:
             sentinel("unexpected operating mode");
     }
@@ -104,6 +102,30 @@ error:
     return 1;
 }
 
+void create_param(char *tempbuf, char *prefix, const char c) {
+    // creates shell-friendly strings to assemble into a system command
+    strcpy(tempbuf, prefix);
+    switch (c) {
+        case '\"':
+            strcat(tempbuf, "\'\"\'");
+            break;
+        case '\'':
+            strcat(tempbuf, "\"\'\"");
+            break;
+        case '\n':
+            strcat(tempbuf, "\'\n\'");
+            break;
+        case '\r':
+            strcat(tempbuf, "\'\r\'");
+            break;
+        default:
+            strcat(tempbuf, "\'");
+            strncat(tempbuf, &c, 1);
+            strcat(tempbuf, "\'");
+    }
+    return;
+}
+
 int main(int argc, char *argv[]) {
     // default parameters
     FILE *input = NULL;
@@ -113,7 +135,7 @@ int main(int argc, char *argv[]) {
     operation_mode op_mode = SANITIZE_MODE;
 
     int opt;
-    while ((opt = getopt(argc, argv, "hud:tq:r:")) != -1) {
+    while ((opt = getopt(argc, argv, "husd:tq:r:")) != -1) {
         switch (opt) {
             case 'h':
                 op_mode = HEADER_MODE;
@@ -121,17 +143,20 @@ int main(int argc, char *argv[]) {
             case 'u':
                 op_mode = RESTORE_MODE;
                 break;
+            case 's':
+                op_mode = SANITIZE_MODE;
+                break;
             case 'd':
-                del = optarg[0];
+                del = optarg[0]; // byte
                 break;
             case 't':
                 del = '\t';
                 break;
             case 'q':
-                quo = optarg[0];
+                quo = optarg[0]; // byte
                 break;
             case 'r':
-                rec = optarg[0];
+                rec = optarg[0]; // byte
                 break;
             case ':':
                 // -d or -q or -r without operand
@@ -145,6 +170,40 @@ int main(int argc, char *argv[]) {
                     "Unrecognized option: '-%c'\n", optopt);
                 goto usage;
         }
+    }
+
+    if (op_mode == HEADER_MODE) {
+        // assemble a shell command. assumes presence of "head" "tr" "nl"
+        char header_cmd[4096];
+        char *tempbuf = malloc(sizeof(char) * 128);
+        check(tempbuf, "unable to allocate memory for tempbuf");
+
+        sprintf(header_cmd, "%s -s", argv[0]);
+        if (del == '\t') {
+            strcat(header_cmd, " -t");
+        } else {
+            create_param(tempbuf, " -d", del);
+            strcat(header_cmd, tempbuf);
+        }
+        create_param(tempbuf, " -q", quo);
+        strcat(header_cmd, tempbuf);
+        create_param(tempbuf, " -r", rec);
+        strcat(header_cmd, tempbuf);
+        if (optind < argc) {
+            strcat(header_cmd, " ");
+            strcat(header_cmd, argv[optind]);
+        }
+        strcat(header_cmd, " | head -n 1 | tr");
+        if (del == '\t') {
+            strcat(header_cmd, " '\t' '\n' | nl");
+        } else {
+            create_param(tempbuf, " ", del);
+            strcat(header_cmd, tempbuf);
+            strcat(header_cmd, " '\n' | nl");
+        }
+        debug("header mode. running command %s", header_cmd);
+        check(system(header_cmd) == 0, "error running header system command %s", header_cmd);
+        return 0; // done
     }
 
     // Process stdin or file names
