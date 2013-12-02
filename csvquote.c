@@ -13,59 +13,69 @@ TODO: handle multi-byte characters and unicode and utf-8 etc
 TODO: parse options
 */
 
-typedef int (*translator) (char *);
+typedef int (*translator)(const char, const char, const char, char *);
 
-translator translatorFactory(
-bool restoremode, char *delimiter, char *quotechar, char *recordsep) {
-    debug("creating translator with d=%d\tq=%d\tr=%d",
-        *delimiter, *quotechar, *recordsep);
-    if (restoremode) {
-        int trans(char *c) {
-            debug("attempting restoration of %c", *c);
-            switch (*c) {
-                case NON_PRINTING_FIELD_SEPARATOR:
-                    *c = *delimiter; //TODO: this is causing segfault
-                    break;
-                case NON_PRINTING_RECORD_SEPARATOR:
-                    *c = '-';//recordsep;
-                    break;
-                // no default case needed
-            }
-            return 0;
-        }
-        debug("returning translator");
-        return &trans;
-    } else {
-        // sanitizing mode
-        int trans(char *c) {
-            static bool isQuoteInEffect = false;
-            static bool isMaybeEscapedQuoteChar = false;
-
-            debug("attempting sanitizing of %c", *c);
-            //if (new_c != c) {
-            //    // buffer is both input and output. avoid unnecessary changes
-            //    buffer[i] = new_c;
-            //}
-            return 0;
-        }
-        debug("returning translator");
-        return &trans;
+int restore(const char delimiter, const char quotechar, const char recordsep, char *c) {
+    // the quotechar is not needed when restoring, but we include it
+    // to keep the function parameters consistent for both translators
+    //debug("attempting restoration of %c", *c);
+    switch (*c) {
+        case NON_PRINTING_FIELD_SEPARATOR:
+            *c = delimiter;
+            break;
+        case NON_PRINTING_RECORD_SEPARATOR:
+            *c = recordsep;
+            break;
+        // no default case needed
     }
+    return 0;
 }
 
-int copy_file(FILE *in, FILE *out, translator trans)
+int sanitize(const char delimiter, const char quotechar, const char recordsep, char *c) {
+    // maintain the state of quoting inside this function
+    // this is OK because we need to read the file
+    // sequentially (not in parallel) because the state
+    // at any point depends on all of the previous data
+    static bool isQuoteInEffect = false;
+    static bool isMaybeEscapedQuoteChar = false;
+
+    if (isMaybeEscapedQuoteChar) {
+        if (*c != quotechar) {
+            // this is the end of a quoted field
+            isQuoteInEffect = false;
+        }
+        isMaybeEscapedQuoteChar = false;
+    } else if (isQuoteInEffect) {
+        if (*c == quotechar) {
+            // this is either an escaped quote char or the end of a quoted
+            // field. need to read one more character to decide which
+            isMaybeEscapedQuoteChar = true;
+        } else if (*c == delimiter) {
+            *c = NON_PRINTING_FIELD_SEPARATOR;
+        } else if (*c == recordsep) {
+            *c = NON_PRINTING_RECORD_SEPARATOR;
+        }
+    } else {
+        // quote not in effect
+        if (*c == quotechar) {
+            isQuoteInEffect = true;
+        }
+    }
+    return 0;
+}
+
+int copy_file(FILE *in, FILE *out, const translator trans, const char del, const char quo, const char rec)
 {
     char buffer[READ_BUFFER_SIZE];
     size_t nbytes;
-    char *c;
-    int i;
+    char *c, *stopat;
 
     while ((nbytes = fread(buffer, sizeof(char), sizeof(buffer), in)) != 0)
     {
-        for (i=0; i<nbytes; i++) {
-            c = &buffer[i];
-            debug("attempting translation of %c", *c);
-            check((*trans)(c) == 0,
+        stopat = buffer + (nbytes);
+        for (c=buffer; c<stopat; c++) {
+            //debug("attempting translation of %c", *c);
+            check((*trans)(del, quo, rec, c) == 0,
                 "translator returned unexpected result.");
         }
         check(fwrite(buffer, sizeof(char), nbytes, out) == nbytes,
@@ -79,16 +89,22 @@ error:
 
 int main(int argc, char *argv[])
 {
-    debug("Started main");
-
+    //debug("Started main");
+    // default parameters
     char del = ',';
     char quo = '"';
     char rec = '\n';
-    translator trans = translatorFactory(true, &del, &quo, &rec);
+    bool restoremode = false;
+    bool headermode = false; // supercedes other parameters
 
-    debug("starting to copy data ...");
-    check(copy_file(stdin, stdout, trans) == 0, "copy_file failed.");
-    debug("Completed main");
+    translator trans = sanitize; // default
+    if (restoremode) {
+        trans = restore;
+    }
+
+    //debug("starting to copy data ...");
+    check(copy_file(stdin, stdout, trans, del, quo, rec) == 0, "copy_file failed.");
+    //debug("Completed main");
     return 0;
 
 error:
