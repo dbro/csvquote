@@ -1,5 +1,6 @@
 csvquote
 ========
+_smart and simple CSV processing on the command line_
 
 Dan Brown, May 2013  
 https://github.com/dbro/csvquote
@@ -65,20 +66,6 @@ other examples:
 
     csvquote foobar.csv | awk -F, '{sum+=$3} END {print sum}'
 
-Implementations
----------------
-
-In order to learn different programming languages, I wrote versions of this
-program in
-
-* python
-* go
-* awk (partial implementation, no command line flag parsing, no header listing)
-
-In terms of speed, the go code is fastest and the python code is slowest. In
-my tests with a large CSV file, the python script takes 70 times longer to run
-than the go program. The awk script takes about 10 times longer to run than go.
-
 Known limitations
 -----------------
 
@@ -94,4 +81,73 @@ they would not be found. There are two options you could try:
 1. Use csvquote as normal, and search for the substitute nonprinting characters
    instead of the regular delimiters.
 2. Instead of using csvquote, try a csv-aware text tool such as csvfix.
+
+Some thoughts on CSV as a data storage format
+=============================================
+
+CSV is easy to read. This is its essential advantage over other formats. Most
+programs that work with data provide methods to read and write CSV data. It
+can be understood by humans, which is helpful for validation and auditing.
+
+But CSV has some challenges when used to transfer information among systems
+and programs. This program exists to handle the challenge of ambiguity in CSV.
+The separator characters can be used as either data (aka text) or metadata
+(aka special characters) depending on whether it is quoted or not. This
+context sensitivity complicates parsing, because (for example) a newline
+cannot be interpreted without its context. If it is surrounded by
+double-quotes then it must be handled as text, otherwise it is a separator.
+
+To repeat: the meaning of each character depends on the entire contents of
+the file up to that point. This has two negative consequences.
+
+* CSV files must be *parsed sequentially* from start to end. They cannot be
+split up and processed in parallel (without first scanning
+them to make sure the splits would be in "safe" places).
+
+* CSV files do not have a mechanism to recover from *corruption*. If an extra
+double-quote character gets inserted into the file, then all of the remaining
+data will be misinterpreted.
+
+Another issue is that the *character encoding* of CSV files is not specified.
+
+Digression on programming languages
+===================================
+
+I'm a novice programmer dabbling in various programming languages. When
+starting to learn a new language, I try to port this program into it. This
+gives me a real-world exercise and a basis for comparison. Here are a few
+remarks based on this limited experience.
+
+* *python* code is quick to write, but slow to run. The python version relies
+on the built-in CSV library, but the other versions of this program do not use
+any special libraries.
+
+* *go* has some convenient improvements relative to C. In cases where runtime
+speed is important, and either concurrency or modern libraries would be
+helpful, this is a good choice. For this program, neither of these applied.
+When thinking about dependencies, go has the benefit of static linking into an
+independent binary; but it's not a widely used language so may not be suitable
+for broad distribution.
+
+* *awk* is a good fit for reading and writing text. Relatively fast to write
+and run. It's available on all UNIX systems, but can be slightly different.
+
+* *C* is fastest to run, and requires some machine-level understanding of
+memory management so takes a bit more care to write the code. It's easy to do
+dangerous things in this language, so a bit of guidance can be very helpful.
+I believe C is more likely to be useful to other people because most systems
+will be able to compile it without installing additional requirements.
+
+Based on these reasons, this project will use the C version in the main branch
+and put the other versions in a different branch for reference.
+
+Run-time Speed comparison
+-------------------------
+
+Time spent processing a 100 MB CSV file on my laptop.
+
+* python ~ 100 seconds
+* awk ~ 14
+* go ~ 1.2
+* C ~ 1.0
 
