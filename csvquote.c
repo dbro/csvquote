@@ -227,6 +227,12 @@ int main(int argc, char *argv[]) {
 
 usage:
     fprintf(stderr, "Usage: %s [-hud:tq:r:] [file]\n", argv[0]);
+    fprintf(stderr, "\t-h\tdefault false\theader mode. print numbered list of fields and exit\n");
+    fprintf(stderr, "\t-u\tdefault false\trestore mode. replace nonprinting characters with original characters\n");
+    fprintf(stderr, "\t-d\tdefault ,\tfield separator character\n");
+    fprintf(stderr, "\t-t\tdefault false\tuse tab as the field separator character\n");
+    fprintf(stderr, "\t-q\tdefault \"\tfield quoting character\n");
+    fprintf(stderr, "\t-r\tdefault \\n\trecord separator character\n");
     return 1;
 
 error:

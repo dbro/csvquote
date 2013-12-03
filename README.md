@@ -66,6 +66,14 @@ other examples:
 
     csvquote foobar.csv | awk -F, '{sum+=$3} END {print sum}'
 
+Installation
+------------
+
+    $ make
+    $ sudo make install
+
+Depends on the "build-essentials" package.
+
 Known limitations
 -----------------
 
