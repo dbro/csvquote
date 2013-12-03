@@ -174,6 +174,7 @@ int main(int argc, char *argv[]) {
 
     if (op_mode == HEADER_MODE) {
         // assemble a shell command. assumes presence of "head" "tr" "nl"
+        // TODO: remove dependency on shell commands. implement this in C instead.
         char header_cmd[4096];
         char *tempbuf = malloc(sizeof(char) * 128);
         check(tempbuf, "unable to allocate memory for tempbuf");
