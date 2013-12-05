@@ -1,0 +1,38 @@
+#!/bin/sh
+# prints the first row of csv data with index numbers
+USAGE="$0 [-d field_delimiter] [-t] [-q quote_character] [-r record_separator] [filename]"
+
+# same defaults as csvquote
+DEL=','
+QUO='"'
+REC='\n'
+while getopts "d:tq:r:" arg; do
+    case $arg in
+        d)
+            DEL=${OPTARG}
+            ;;
+        t)
+            DEL='\t'
+            ;;
+        q)
+            QUO=${OPTARG}
+            ;;
+        r)
+            REC=${OPTARG}
+            ;;
+        *)
+            echo $USAGE;
+            exit 1;
+            ;;
+    esac
+done
+
+shift `echo "$OPTIND - 1" | bc` # is there a better way to decrement?
+
+CSVQUOTE=`which csvquote` || CSVQUOTE="./csvquote"
+if [ ! -f $CSVQUOTE ]; then
+    echo "csvquote program not found. exiting"
+    exit 1
+fi
+
+$CSVQUOTE -d $DEL -q $QUO -r $REC $@ | head -n 1 | tr $DEL '\n' | nl

@@ -15,7 +15,7 @@ TODO: verify that it handles multi-byte characters and unicode and utf-8 etc
 */
 
 typedef void (*translator)(const char, const char, const char, char *);
-typedef enum { HEADER_MODE, RESTORE_MODE, SANITIZE_MODE } operation_mode;
+typedef enum { RESTORE_MODE, SANITIZE_MODE } operation_mode;
 
 void restore(const char delimiter, const char quotechar, const char recordsep, char *c) {
     // the quotechar is not needed when restoring, but we include it
@@ -81,8 +81,6 @@ const char del, const char quo, const char rec) {
         case RESTORE_MODE:
             trans = restore;
             break;
-        //case HEADER_MODE:
-        //    sentinel("unexpected operating mode");
         default:
             sentinel("unexpected operating mode");
     }
@@ -102,30 +100,6 @@ error:
     return 1;
 }
 
-void create_param(char *tempbuf, char *prefix, const char c) {
-    // creates shell-friendly strings to assemble into a system command
-    strcpy(tempbuf, prefix);
-    switch (c) {
-        case '\"':
-            strcat(tempbuf, "\'\"\'");
-            break;
-        case '\'':
-            strcat(tempbuf, "\"\'\"");
-            break;
-        case '\n':
-            strcat(tempbuf, "\'\n\'");
-            break;
-        case '\r':
-            strcat(tempbuf, "\'\r\'");
-            break;
-        default:
-            strcat(tempbuf, "\'");
-            strncat(tempbuf, &c, 1);
-            strcat(tempbuf, "\'");
-    }
-    return;
-}
-
 int main(int argc, char *argv[]) {
     // default parameters
     FILE *input = NULL;
@@ -135,11 +109,8 @@ int main(int argc, char *argv[]) {
     operation_mode op_mode = SANITIZE_MODE;
 
     int opt;
-    while ((opt = getopt(argc, argv, "husd:tq:r:")) != -1) {
+    while ((opt = getopt(argc, argv, "usd:tq:r:")) != -1) {
         switch (opt) {
-            case 'h':
-                op_mode = HEADER_MODE;
-                break;
             case 'u':
                 op_mode = RESTORE_MODE;
                 break;
@@ -172,41 +143,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (op_mode == HEADER_MODE) {
-        // assemble a shell command. assumes presence of "head" "tr" "nl"
-        // TODO: remove dependency on shell commands. implement this in C instead.
-        char header_cmd[4096];
-        char *tempbuf = malloc(sizeof(char) * 128);
-        check(tempbuf, "unable to allocate memory for tempbuf");
-
-        sprintf(header_cmd, "%s -s", argv[0]);
-        if (del == '\t') {
-            strcat(header_cmd, " -t");
-        } else {
-            create_param(tempbuf, " -d", del);
-            strcat(header_cmd, tempbuf);
-        }
-        create_param(tempbuf, " -q", quo);
-        strcat(header_cmd, tempbuf);
-        create_param(tempbuf, " -r", rec);
-        strcat(header_cmd, tempbuf);
-        if (optind < argc) {
-            strcat(header_cmd, " ");
-            strcat(header_cmd, argv[optind]);
-        }
-        strcat(header_cmd, " | head -n 1 | tr");
-        if (del == '\t') {
-            strcat(header_cmd, " '\t' '\n' | nl");
-        } else {
-            create_param(tempbuf, " ", del);
-            strcat(header_cmd, tempbuf);
-            strcat(header_cmd, " '\n' | nl");
-        }
-        debug("header mode. running command %s", header_cmd);
-        check(system(header_cmd) == 0, "error running header system command %s", header_cmd);
-        return 0; // done
-    }
-
     // Process stdin or file names
     if (optind >= argc) {
         check(copy_file(stdin, op_mode, del, quo, rec) == 0,
@@ -226,8 +162,8 @@ int main(int argc, char *argv[]) {
     return 0;
 
 usage:
-    fprintf(stderr, "Usage: %s [-hud:tq:r:] [file]\n", argv[0]);
-    fprintf(stderr, "\t-h\tdefault false\theader mode. print numbered list of fields and exit\n");
+    fprintf(stderr, "Usage: %s [OPTION] [files]\n", argv[0]);
+    fprintf(stderr, "\tfiles are zero or more filenames. If none given, read from standard input");
     fprintf(stderr, "\t-u\tdefault false\trestore mode. replace nonprinting characters with original characters\n");
     fprintf(stderr, "\t-d\tdefault ,\tfield separator character\n");
     fprintf(stderr, "\t-t\tdefault false\tuse tab as the field separator character\n");

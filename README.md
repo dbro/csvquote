@@ -72,6 +72,10 @@ Installation
     $ make
     $ sudo make install
 
+This will install the csvquote program as well as csvheader, which is a
+convenient script that prints out the field numbers next to the first row
+of data.
+
 Depends on the "build-essentials" package.
 
 Known limitations
@@ -82,7 +86,7 @@ is rare in CSV files. It is able to work with Windows-style line endings that
 use /r/n as the record separator.
 
 If you need to search for special characters (commas and newlines)
-*within a quoted field*, then csvquote will *PROBABLY NOT* work for you. These
+**within a quoted field**, then csvquote will **PROBABLY NOT** work for you. These
 delimiter characters get temporarily replaced with nonprinting characters so
 they would not be found. There are two options you could try:
 
@@ -108,15 +112,15 @@ double-quotes then it must be handled as text, otherwise it is a separator.
 To repeat: the meaning of each character depends on the entire contents of
 the file up to that point. This has two negative consequences.
 
-* CSV files must be *parsed sequentially* from start to end. They cannot be
+* CSV files must be **parsed sequentially** from start to end. They cannot be
 split up and processed in parallel (without first scanning
 them to make sure the splits would be in "safe" places).
 
-* CSV files do not have a mechanism to recover from *corruption*. If an extra
+* CSV files do not have a mechanism to recover from **corruption**. If an extra
 double-quote character gets inserted into the file, then all of the remaining
 data will be misinterpreted.
 
-Another issue is that the *character encoding* of CSV files is not specified.
+Another issue is that the **character encoding** of CSV files is not specified.
 
 Digression on programming languages
 ===================================
@@ -126,21 +130,21 @@ starting to learn a new language, I try to port this program into it. This
 gives me a real-world exercise and a basis for comparison. Here are a few
 remarks based on this limited experience.
 
-* *python* code is quick to write, but slow to run. The python version relies
+* **python** code is quick to write, but slow to run. The python version relies
 on the built-in CSV library, but the other versions of this program do not use
 any special libraries.
 
-* *go* has some convenient improvements relative to C. In cases where runtime
+* **go** has some convenient improvements relative to C. In cases where runtime
 speed is important, and either concurrency or modern libraries would be
 helpful, this is a good choice. For this program, neither of these applied.
 When thinking about dependencies, go has the benefit of static linking into an
 independent binary; but it's not a widely used language so may not be suitable
 for broad distribution.
 
-* *awk* is a good fit for reading and writing text. Relatively fast to write
+* **awk** is a good fit for reading and writing text. Relatively fast to write
 and run. It's available on all UNIX systems, but can be slightly different.
 
-* *C* is fastest to run, and requires some machine-level understanding of
+* **C** is fastest to run, and requires some machine-level understanding of
 memory management so takes a bit more care to write the code. It's easy to do
 dangerous things in this language, so a bit of guidance can be very helpful.
 I believe C is more likely to be useful to other people because most systems
