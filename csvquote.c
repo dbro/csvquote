@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
 
 usage:
     fprintf(stderr, "Usage: %s [OPTION] [files]\n", argv[0]);
-    fprintf(stderr, "\tfiles are zero or more filenames. If none given, read from standard input");
+    fprintf(stderr, "\tfiles are zero or more filenames. If none given, read from standard input\n");
     fprintf(stderr, "\t-u\tdefault false\trestore mode. replace nonprinting characters with original characters\n");
     fprintf(stderr, "\t-d\tdefault ,\tfield separator character\n");
     fprintf(stderr, "\t-t\tdefault false\tuse tab as the field separator character\n");
