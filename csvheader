@@ -35,4 +35,4 @@ if [ ! -f $CSVQUOTE ]; then
     exit 1
 fi
 
-$CSVQUOTE -d $DEL -q $QUO -r $REC $@ | head -n 1 | tr $DEL '\n' | nl
+$CSVQUOTE -d $DEL -q $QUO -r $REC $@ | head -n 1 | tr $DEL '\n' | nl -ba
