@@ -2,7 +2,8 @@ csvquote
 ========
 _smart and simple CSV processing on the command line_
 
-Dan Brown, May 2013  
+Dan Brown, May 2013
+Jarno Suni, August 2015
 https://github.com/dbro/csvquote
 
 Are you looking for a way to process CSV data with standard UNIX shell commands?
