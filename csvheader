@@ -5,14 +5,16 @@ USAGE="$0 [-d field_delimiter] [-t] [-q quote_character] [-r record_separator] [
 # same defaults as csvquote
 DEL=','
 QUO='"'
-REC='\n'
+REC='
+' # newline
+
 while getopts "d:tq:r:" arg; do
     case $arg in
         d)
             DEL=${OPTARG}
             ;;
         t)
-            DEL='\t'
+            DEL='	' # tab
             ;;
         q)
             QUO=${OPTARG}
@@ -27,12 +29,10 @@ while getopts "d:tq:r:" arg; do
     esac
 done
 
-shift `echo "$OPTIND - 1" | bc` # is there a better way to decrement?
-
 CSVQUOTE=`which csvquote` || CSVQUOTE="./csvquote"
 if [ ! -f $CSVQUOTE ]; then
     echo "csvquote program not found. exiting"
     exit 1
 fi
 
-$CSVQUOTE -d $DEL -q $QUO -r $REC $@ | head -n 1 | tr $DEL '\n' | nl -ba
+$CSVQUOTE $@ | head -n 1 | tr "$DEL" '\n' | nl -ba | $CSVQUOTE -u -d "$DEL" -q "$QUO" -r "$REC"
