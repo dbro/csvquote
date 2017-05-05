@@ -14,12 +14,13 @@
 TODO: verify that it handles multi-byte characters and unicode and utf-8 etc
 */
 
-typedef void (*translator)(const char, const char, const char, char *);
+typedef void (*translator)(const char, const char, const char, const char, char *);
 typedef enum { RESTORE_MODE, SANITIZE_MODE } operation_mode;
 
-void restore(const char delimiter, const char quotechar, const char recordsep, char *c) {
-    // the quotechar is not needed when restoring, but we include it
-    // to keep the function parameters consistent for both translators
+void restore(const char delimiter, const char quotechar, const char recordsep,
+const char escchar, char *c) {
+    // the quotechar and escchar are not needed when restoring, but we include
+    // them to keep the function parameters consistent for both translators
     switch (*c) {
         case NON_PRINTING_FIELD_SEPARATOR:
             *c = delimiter;
@@ -32,13 +33,15 @@ void restore(const char delimiter, const char quotechar, const char recordsep, c
     return;
 }
 
-void sanitize(const char delimiter, const char quotechar, const char recordsep, char *c) {
+void sanitize(const char delimiter, const char quotechar, const char recordsep,
+const char escchar, char *c) {
     // maintain the state of quoting inside this function
     // this is OK because we need to read the file
     // sequentially (not in parallel) because the state
     // at any point depends on all of the previous data
     static bool isQuoteInEffect = false;
     static bool isMaybeEscapedQuoteChar = false;
+    static bool isEscapeInEffect = false;
 
     if (isMaybeEscapedQuoteChar) {
         if (*c != quotechar) {
@@ -47,7 +50,7 @@ void sanitize(const char delimiter, const char quotechar, const char recordsep, 
         }
         isMaybeEscapedQuoteChar = false;
     } else if (isQuoteInEffect) {
-        if (*c == quotechar) {
+        if (*c == quotechar && !isEscapeInEffect) {
             // this is either an escaped quote char or the end of a quoted
             // field. need to read one more character to decide which
             isMaybeEscapedQuoteChar = true;
@@ -57,21 +60,26 @@ void sanitize(const char delimiter, const char quotechar, const char recordsep, 
             *c = NON_PRINTING_RECORD_SEPARATOR;
         }
     } else {
-        // quote not in effect
-        if (*c == quotechar) {
+        // quote not in effect and escape not in effect
+        if (*c == quotechar && !isEscapeInEffect) {
             isQuoteInEffect = true;
         }
+    }
+    if (*c == escchar && !isEscapeInEffect) {
+        isEscapeInEffect = true;
+    } else {
+        isEscapeInEffect = false;
     }
     return;
 }
 
 int copy_file(FILE *in, const operation_mode op_mode,
-const char del, const char quo, const char rec) {
+const char del, const char quo, const char rec, const char esc) {
     char buffer[READ_BUFFER_SIZE];
     size_t nbytes;
     char *c, *stopat;
 
-    debug("copying file with d=%d\tq=%d\tr=%d", del, quo, rec);
+    debug("copying file with d=%d\tq=%d\tr=%d\te=%d", del, quo, rec, esc);
 
     translator trans;
     switch (op_mode) {
@@ -89,7 +97,7 @@ const char del, const char quo, const char rec) {
     {
         stopat = buffer + (nbytes);
         for (c=buffer; c<stopat; c++) {
-            (*trans)(del, quo, rec, c); // no error checking inside this loop
+            (*trans)(del, quo, rec, esc, c); // no error checking inside this loop
         }
         check(fwrite(buffer, sizeof(char), nbytes, stdout) == nbytes,
             "Failed to write %zu bytes\n", nbytes);
@@ -106,6 +114,7 @@ int main(int argc, char *argv[]) {
     char del = ',';
     char quo = '"';
     char rec = '\n';
+    char esc = '\\';
     operation_mode op_mode = SANITIZE_MODE;
 
     int opt;
@@ -129,8 +138,11 @@ int main(int argc, char *argv[]) {
             case 'r':
                 rec = optarg[0]; // byte
                 break;
+            case 'e':
+                esc = optarg[0]; // byte
+                break;
             case ':':
-                // -d or -q or -r without operand
+                // -d or -q or -r or -e without operand
                 fprintf(stderr,
                     "Option -%c requires an operand\n", optopt);
                 goto usage;
@@ -145,7 +157,7 @@ int main(int argc, char *argv[]) {
 
     // Process stdin or file names
     if (optind >= argc) {
-        check(copy_file(stdin, op_mode, del, quo, rec) == 0,
+        check(copy_file(stdin, op_mode, del, quo, rec, esc) == 0,
             "failed to copy from stdin");
     } else {
         // supports multiple file names
@@ -153,7 +165,7 @@ int main(int argc, char *argv[]) {
         for (i=optind; i<argc; i++) {
             input = fopen(argv[i], "r");
             check(input != 0, "failed to open file %s", argv[optind]);
-            check(copy_file(input, op_mode, del, quo, rec) == 0,
+            check(copy_file(input, op_mode, del, quo, rec, esc) == 0,
                 "failed to copy from file %s", argv[i]);
             if (input) { fclose(input); }
         }
@@ -169,6 +181,7 @@ usage:
     fprintf(stderr, "\t-t\tdefault false\tuse tab as the field separator character\n");
     fprintf(stderr, "\t-q\tdefault \"\tfield quoting character\n");
     fprintf(stderr, "\t-r\tdefault \\n\trecord separator character\n");
+    fprintf(stderr, "\t-e\tdefault \\\tescape character\n");
     return 1;
 
 error:
