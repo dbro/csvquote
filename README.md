@@ -160,7 +160,7 @@ Time spent processing a 100 MB CSV file on my laptop.
 
 * python ~ 100 seconds
 * lua ~ 60
-* awk ~ 14
+* awk (mawk) ~ 14
 * luajit ~ 3.5
 * go ~ 1.2
 * C ~ 1.0
