@@ -94,6 +94,8 @@ const char del, const char quo, const char rec) {
         check(fwrite(buffer, sizeof(char), nbytes, stdout) == nbytes,
             "Failed to write %zu bytes\n", nbytes);
     }
+    check(ferror(in) == 0, "Failed to read input\n");
+    check(fflush(stdout) == 0, "Failed to flush output\n");
     return 0;
 
 error:
