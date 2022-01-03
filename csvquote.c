@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
     bool restore_mode = false;
 
     int opt;
-    while ((opt = getopt(argc, argv, "usd:tq:r:")) != -1) {
+    while ((opt = getopt(argc, argv, "usd:tq:r:b")) != -1) {
         switch (opt) {
             case 'u':
                 restore_mode = true;
