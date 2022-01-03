@@ -40,31 +40,28 @@ const unsigned char del, const unsigned char quo, const unsigned char rec) {
 	while (c < stopat) {
 	    q_next = (unsigned char *) strchr((char *)c, quo);
             if (q_start == NULL) { // unquoted state
-		q_start = q_next;
 		if (q_next == NULL) { // opening quote not yet found
-		    q_next = stopat;
+		    c = stopat; // done with this chunk
+                } else { // opening quote found
+		    q_start = q_next;
 		}
-		c = q_next + 1;
 	    } else { // quoted state
-		if (q_next != NULL) {
-		    q_end = q_next;
-		} else { // closing quote not yet found
+                c = q_start + 1; // starting pointer for translation
+		if (q_next == NULL) { // closing quote not yet found
 	            q_end = stopat;
+		    // retain quoted state into
+		    // the next chunk(s) to be read
+		    q_start = buffer - 1; // continue translation at the start of the next chunk
+		} else { // closing quote found
+		    q_end = q_next;
+		    // resume unquoted state after the translation
+		    q_start = NULL;
 		}
 		// translate the characters inside the quoted string
-                for (c=q_start+1; c<q_end; c++) {
+                for (; c<q_end; c++) { // starting value of c already set above
                     *c = trans[*c];
 	        }
 		c = q_end + 1;
-		if (q_next == NULL) { // closing quote not yet found
-		    // retain quoted state into
-		    // the next chunk(s) to be read
-		    q_start = buffer - 1; // for use in translation
-		    q_end = NULL;
-		} else { // resume unquoted state
-		    q_start = NULL;
-		    q_end = NULL;
-		}
 	    }
 	}
         check(fwrite(buffer, sizeof(char), nbytes, stdout) == nbytes,
