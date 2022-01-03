@@ -6,46 +6,67 @@
 #define NDEBUG
 #include "dbg.h"
 
-#define READ_BUFFER_SIZE 4096
+#define READ_BUFFER_SIZE (16 * 1024)
 #define NON_PRINTING_FIELD_SEPARATOR 0x1F
 #define NON_PRINTING_RECORD_SEPARATOR 0x1E
-
-/*
-TODO: verify that it handles multi-byte characters and unicode and utf-8 etc
-*/
 
 int copy_file(FILE *in, const bool restore_mode,
 const unsigned char del, const unsigned char quo, const unsigned char rec) {
     unsigned char buffer[READ_BUFFER_SIZE];
     size_t nbytes;
-    unsigned char *c, *stopat;
-    unsigned char state = 0; // 0 means unquoted, 1 means quoted
-    unsigned char trans[2][256]; // 2 states, 256 possible values of char
+    unsigned char *c, *q_next, *q_start, *q_end, *stopat;
+    unsigned char trans[256]; // 256 possible values of char
 
-    debug("copying file with d=%d\tq=%d\tr=%d", del, quo, rec);
-
-    // initialize translation mapping between states
+    // initialize translation mapping to/from sanitized csv format
     for (int i=0; i<256; i++) {
-	trans[0][i] = i;
-	trans[1][i] = i;
+	trans[i] = i;
     }
     if (restore_mode) {
-        trans[0][NON_PRINTING_RECORD_SEPARATOR] = rec;
-	trans[0][NON_PRINTING_FIELD_SEPARATOR] = del;
-	trans[1][NON_PRINTING_RECORD_SEPARATOR] = rec;
-        trans[1][NON_PRINTING_FIELD_SEPARATOR] = del;
+	trans[NON_PRINTING_RECORD_SEPARATOR] = rec;
+        trans[NON_PRINTING_FIELD_SEPARATOR] = del;
     } else { // sanitize mode
-        trans[1][rec] = NON_PRINTING_RECORD_SEPARATOR;
-        trans[1][del] = NON_PRINTING_FIELD_SEPARATOR;
+        trans[rec] = NON_PRINTING_RECORD_SEPARATOR;
+        trans[del] = NON_PRINTING_FIELD_SEPARATOR;
     }
 
+    q_next = q_start = q_end = NULL;
+
+    // read chunks from the input file
     while ((nbytes = fread(buffer, sizeof(char), sizeof(buffer), in)) != 0)
     {
+        c = buffer;
         stopat = buffer + (nbytes);
-        for (c=buffer; c<stopat; c++) {
-            state ^= (*c == quo); // has no effect in restore mode
-            *c = trans[state][*c];
-        }
+	// scan for quote characters in the chunk
+	while (c < stopat) {
+	    q_next = (unsigned char *) strchr((char *)c, quo);
+            if (q_start == NULL) { // unquoted state
+		q_start = q_next;
+		if (q_next == NULL) { // opening quote not yet found
+		    q_next = stopat;
+		}
+		c = q_next + 1;
+	    } else { // quoted state
+		if (q_next != NULL) {
+		    q_end = q_next;
+		} else { // closing quote not yet found
+	            q_end = stopat;
+		}
+		// translate the characters inside the quoted string
+                for (c=q_start+1; c<q_end; c++) {
+                    *c = trans[*c];
+	        }
+		c = q_end + 1;
+		if (q_next == NULL) { // closing quote not yet found
+		    // retain quoted state into
+		    // the next chunk(s) to be read
+		    q_start = buffer - 1; // for use in translation
+		    q_end = NULL;
+		} else { // resume unquoted state
+		    q_start = NULL;
+		    q_end = NULL;
+		}
+	    }
+	}
         check(fwrite(buffer, sizeof(char), nbytes, stdout) == nbytes,
             "Failed to write %zu bytes\n", nbytes);
     }
@@ -66,7 +87,7 @@ int main(int argc, char *argv[]) {
     bool restore_mode = false;
 
     int opt;
-    while ((opt = getopt(argc, argv, "usd:tq:r:")) != -1) {
+    while ((opt = getopt(argc, argv, "usd:tq:r:b")) != -1) {
         switch (opt) {
             case 'u':
                 restore_mode = true;
@@ -85,6 +106,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'r':
                 rec = optarg[0]; // byte
+                break;
+            case 'b':
+                setvbuf (stdout, NULL, _IOLBF, 0);
                 break;
             case ':':
                 // -d or -q or -r without operand
@@ -126,6 +150,7 @@ usage:
     fprintf(stderr, "\t-t\tdefault false\tuse tab as the field separator character\n");
     fprintf(stderr, "\t-q\tdefault \"\tfield quoting character\n");
     fprintf(stderr, "\t-r\tdefault \\n\trecord separator character\n");
+    fprintf(stderr, "\t-b\tdefault false\tuse line buffering for output (slower)\n");
     return 1;
 
 error:
