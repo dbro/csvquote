@@ -165,3 +165,4 @@ Time spent processing a 100 MB CSV file on my laptop.
 * go ~ 1.2
 * C ~ 1.0
 
+These numbers above were observed in 2013, and as of 2022 the current performance of the C version is faster by a factor of 5.
