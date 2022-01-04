@@ -2,7 +2,7 @@ EXE=csvquote
 EXTRA=csvheader
 CFLAGS=-Wall -g
 
-BINDIR=/usr/local/bin
+BINDIR?=/usr/local/bin
 
 all:	$(EXE)
 
