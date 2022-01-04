@@ -23,7 +23,7 @@ so that regular unix command line tools can properly handle CSV data that
 contain commas and newlines inside quoted data fields.
 
 Without this program, embedded special characters would be incorrectly
-interpretated as separators when they are inside quoted data fields.
+interpreted as separators when they are inside quoted data fields.
 
 By using csvquote, you temporarily replace the special characters inside quoted
 fields with harmless nonprinting characters that can be processed as data by
@@ -65,6 +65,30 @@ other examples:
     csvquote -q "'" foobar.csv | sort -t, -k3 | csvquote -u
 
     csvquote foobar.csv | awk -F, '{sum+=$3} END {print sum}'
+
+How it works
+------------
+
+We can compare the hexadecimal representation of the data to see how csvquote substitutes the non-printing characters (1e and 1f) for newlines (0a) and commas (2c). The embedded special characters are shown in **bold** font below. The first command shows the original data, the second command shows how the command 'csvquote' sanitizes the delimiters contained inside quoted strings, and the third command shows how the command 'csvquote -u' restores the original data. Note that xxd uses '.' characters to represent unprintable characters in its text representation on the right side below.
+
+<pre>
+$ echo 'ab,"cd<b>,</b>ef","hi
+jk"' | xxd -g 1 -c 20
+
+00000000: 61 62 2c 22 63 64 <b>2c</b> 65 66 22 2c 22 68 69 <b>0a</b> 6a 6b 22 0a     ab,"cd<b>,</b>ef","hi<b>.</b>jk".
+
+
+$ echo 'ab,"cd<b>,</b>ef","hi
+jk"' | <b>csvquote</b> | xxd -g 1 -c 20
+
+00000000: 61 62 2c 22 63 64 <b>1f</b> 65 66 22 2c 22 68 69 <b>1e</b> 6a 6b 22 0a     ab,"cd<b>.</b>ef","hi<b>.</b>jk".
+
+
+$ echo 'ab,"cd<b>,</b>ef","hi
+jk"' | <b>csvquote | csvquote -u</b> | xxd -g 1 -c 20
+
+00000000: 61 62 2c 22 63 64 <b>2c</b> 65 66 22 2c 22 68 69 <b>0a</b> 6a 6b 22 0a     ab,"cd<b>,</b>ef","hi<b>.</b>jk".
+</pre>
 
 Installation
 ------------
