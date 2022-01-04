@@ -44,13 +44,13 @@ const unsigned char del, const unsigned char quo, const unsigned char rec) {
 		    c = stopat; // done with this chunk
                 } else { // opening quote found
 		    q_start = q_next;
+		    c = q_start + 1;
 		}
 	    } else { // quoted state
                 c = q_start + 1; // starting pointer for translation
 		if (q_next == NULL) { // closing quote not yet found
 	            q_end = stopat;
-		    // retain quoted state into
-		    // the next chunk(s) to be read
+		    // retain quoted state into the next chunk(s) to be read
 		    q_start = buffer - 1; // continue translation at the start of the next chunk
 		} else { // closing quote found
 		    q_end = q_next;
