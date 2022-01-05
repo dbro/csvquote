@@ -38,13 +38,18 @@ const unsigned char del, const unsigned char quo, const unsigned char rec) {
         stopat = buffer + (nbytes);
 	// scan for quote characters in the chunk
 	while (c < stopat) {
-	    q_next = (unsigned char *) strchr((char *)c, quo);
+	    q_next = (unsigned char *) memchr(c, quo, stopat - c);
             if (q_start == NULL) { // unquoted state
 		if (q_next == NULL) { // opening quote not yet found
-		    c = stopat; // done with this chunk
+		    //c = stopat; // done with this chunk
+		    break;
                 } else { // opening quote found
 		    q_start = q_next;
 		    c = q_start + 1;
+		    if (c == stopat) {
+		        q_start = buffer - 1;
+			break;
+	            }
 		}
 	    } else { // quoted state
                 c = q_start + 1; // starting pointer for translation
