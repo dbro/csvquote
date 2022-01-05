@@ -1,6 +1,6 @@
 EXE=csvquote
 EXTRA=csvheader
-CFLAGS=-Wall -g
+CFLAGS=-Wall -g -O3
 
 BINDIR?=/usr/local/bin
 

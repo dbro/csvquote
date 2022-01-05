@@ -6,7 +6,7 @@
 #define NDEBUG
 #include "dbg.h"
 
-#define READ_BUFFER_SIZE (16 * 1024)
+#define READ_BUFFER_SIZE (64 * 1024)
 #define NON_PRINTING_FIELD_SEPARATOR 0x1F
 #define NON_PRINTING_RECORD_SEPARATOR 0x1E
 
