@@ -102,6 +102,10 @@ of data.
 
 Depends on the "build-essentials" package.
 
+### via Homebrew (Mac, Linux)
+
+    $ brew install sschlesier/csvutils/csvquote
+
 Known limitations
 -----------------
 
