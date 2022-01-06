@@ -146,47 +146,20 @@ data will be misinterpreted.
 
 Another issue is that the **character encoding** of CSV files is not specified.
 
-Digression on programming languages
-===================================
-
-I'm a novice programmer dabbling in various programming languages. When
-starting to learn a new language, I try to port this program into it. This
-gives me a real-world exercise and a basis for comparison. Here are a few
-remarks based on this limited experience.
-
-* **python** code is quick to write, but slow to run. The python version relies
-on the built-in CSV library, but the other versions of this program do not use
-any special libraries.
-
-* **go** has some convenient improvements relative to C. In cases where runtime
-speed is important, and either concurrency or modern libraries would be
-helpful, this is a good choice. For this program, neither of these applied.
-When thinking about dependencies, go has the benefit of static linking into an
-independent binary; but it's not a widely used language so may not be suitable
-for broad distribution.
-
-* **awk** is a good fit for reading and writing text. Relatively fast to write
-and run. It's available on all UNIX systems, but can be slightly different.
-
-* **C** is fastest to run, and requires some machine-level understanding of
-memory management so takes a bit more care to write the code. It's easy to do
-dangerous things in this language, so a bit of guidance can be very helpful.
-I believe C is more likely to be useful to other people because most systems
-will be able to compile it without installing additional requirements.
-
-Based on these reasons, this project will use the C version in the main branch
-and put the other versions in a different branch for reference.
-
 Run-time Speed comparison
--------------------------
+=========================
 
-Time spent processing a 100 MB CSV file on my laptop.
+How fast is csvquote? Here are some data processing rates measured when running csvquote on an Intel i7 CPU model from 2013. Due to recently introduced optimizations in csvquote, the processing speed depends on how common the quote characters are in the source data.
 
-* python ~ 100 seconds
-* lua ~ 60
-* awk (mawk) ~ 14
-* luajit ~ 3.5
-* go ~ 1.2
-* C ~ 1.0
+* 1.9 GB/sec : csvquote reading random csv data with 10% of fields quoted
+* 0.5 GB/sec : csvquote reading random csv data with 100% of fields quoted
+* 3.7 GB/sec : csvquote reading random csv data with no quoted fields (nothing for csvquote to do!)
 
-These numbers above were observed in 2013, and as of 2022 the current performance of the C version is faster by a factor of 5.
+A common use of csvquote is as one (or two) steps in a pipeline sequence of commands commands. When each command can run on a separate processor, the time to complete the overall pipeline sequence will be determined by the slowest step in the chain of dependencies. So as long as csvquote is not the slowest step in the sequence, then its relative speed will not affect the overall run time. This seems likely if some of these commands are involved:
+
+* 3.1 GB/sec : wc -l
+* 1.3 GB/sec : grep 'ZZZ'
+* 1.0 GB/sec : tr 'a' 'b'
+* 0.3 GB/sec : cut -f1
+
+In January 2022, csvquote was rewritten to be approximately 10x faster than before, from optimizing for source data with at least half of its fields not quoted. The inspiration to revisit this old code came from a rewrite by [skeeto@](https://github.com/skeeto/scratch/tree/master/csvquote). His version is especially aimed at modern CPUs (Intel and AMD from about the year 2015) and runs approximately 50% faster using [AVX2 SIMD](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) instructions. When running skeeto's version on my CPU it processes data at a consistent pace of 0.7 GB/sec, and does not vary depending on how many quote characters are in the source data.
