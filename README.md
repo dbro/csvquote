@@ -111,7 +111,7 @@ Known limitations
 
 The program does not correctly handle multi-character delimiters, but this
 is rare in CSV files. It is able to work with Windows-style line endings that
-use /r/n as the record separator.
+use \r\n as the record separator.
 
 If you need to search for special characters (commas and newlines)
 **within a quoted field**, then csvquote will **PROBABLY NOT** work for you. These
